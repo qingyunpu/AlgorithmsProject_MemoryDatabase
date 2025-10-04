@@ -88,9 +88,14 @@ def quick_sort(arr, key, reverse=False):
     if len(arr) <= 1:
         return arr
     pivot = arr[len(arr) // 2][key]
-    left = [x for x in arr if (x[key] < pivot) ^ reverse]
-    middle = [x for x in arr if x[key] == pivot]
-    right = [x for x in arr if (x[key] > pivot) ^ reverse]
+    if reverse:  # descending
+        left = [x for x in arr if x[key] > pivot]
+        middle = [x for x in arr if x[key] == pivot]
+        right = [x for x in arr if x[key] < pivot]
+    else: 
+        left = [x for x in arr if x[key] < pivot]
+        middle = [x for x in arr if x[key] == pivot]
+        right = [x for x in arr if x[key] > pivot]
     return quick_sort(left, key, reverse) + middle + quick_sort(right, key, reverse)
 
 
@@ -188,7 +193,7 @@ if __name__ == "__main__":
         for row in reader:
             ll.append(row)
 
-    print("✅ Loaded student-data.csv into memory database.")
+    print("Loaded student-data.csv into memory database.")
 
     while True:
         query = input("\nEnter SQL-like query (or 'exit' to quit):\n> ")
