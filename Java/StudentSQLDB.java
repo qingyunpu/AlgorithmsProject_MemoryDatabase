@@ -3,23 +3,23 @@
  *
  * Features
  *  - Load CSV into an in-memory linked list
- *  - Insertion sort (linked-list relink)
- *  - Quick sort (linked-list recursive partition)
+ *  - Sorting algorithms: insertion_sort, quick_sort, merge_sort, bubble_sort
  *  - Minimal SQL:
- *      select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort;
+ *      select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort|merge_sort|bubble_sort;
  *  - Recursive CSV export via: output <file>
  *    (exports ONLY the last query's SELECT columns; falls back to all columns if no query yet)
- *
- * Usage
- *   javac StudentSQLDB.java
- *   java StudentSQLDB student-data.csv
- *   # REPL examples:
- *   select school,sex,age from t1 order by age ASC with insertion_sort;
- *   output out.csv
- *   select school,sex,age from t1 order by age DSC with quick_sort;
- *   output out2.csv
- *   quit
+ * Example:
+ *  select school,sex,age from t1 order by age ASC with bubble_sort;
+ *  output bubble.csv
+ *  select school,sex,age from t1 order by age DSC with quick_sort;
+ *  output quick.csv
+ *  select school,sex,age from t1 order by age ASC with merge_sort;
+ *  output merge.csv
+ *  select school,sex,age from t1 order by age ASC with insertion_sort;
+ *  output insertion.csv
+ *  quit
  */
+
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -136,6 +136,68 @@ public class StudentSQLDB {
             return headNew;
         }
 
+        /* ---------- Merge Sort (linked-list, stable) ---------- */
+        void mergeSort(String colName, boolean asc) {
+            if (head == null) return;
+            int j = colIndex(colName);
+            boolean isNum = isNumericColumn(j);
+            head = mergeSortRec(head, j, isNum, asc);
+        }
+
+        private Node mergeSortRec(Node h, int j, boolean isNum, boolean asc) {
+            if (h == null || h.next == null) return h;
+            Node mid = splitMid(h);
+            Node left = mergeSortRec(h, j, isNum, asc);
+            Node right = mergeSortRec(mid, j, isNum, asc);
+            return mergeTwo(left, right, j, isNum, asc);
+        }
+
+        private Node splitMid(Node h) {
+            Node slow = h, fast = h, prev = null;
+            while (fast != null && fast.next != null) {
+                prev = slow; slow = slow.next; fast = fast.next.next;
+            }
+            if (prev != null) prev.next = null;
+            return slow;
+        }
+
+        private Node mergeTwo(Node a, Node b, int j, boolean isNum, boolean asc) {
+            Node dummy = new Node(null), tail = dummy;
+            while (a != null && b != null) {
+                if (compare(a.row, b.row, j, isNum, asc) <= 0) {
+                    tail.next = a; a = a.next;
+                } else {
+                    tail.next = b; b = b.next;
+                }
+                tail = tail.next; tail.next = null;
+            }
+            tail.next = (a != null) ? a : b;
+            return dummy.next;
+        }
+
+        /* ---------- Bubble Sort (linked-list; swap row refs) ---------- */
+        void bubbleSort(String colName, boolean asc) {
+            if (head == null) return;
+            int j = colIndex(colName);
+            boolean isNum = isNumericColumn(j);
+
+            boolean swapped;
+            do {
+                swapped = false;
+                Node cur = head;
+                while (cur != null && cur.next != null) {
+                    if (compare(cur.row, cur.next.row, j, isNum, asc) > 0) {
+                        // swap row payloads instead of relinking nodes
+                        String[] tmp = cur.row;
+                        cur.row = cur.next.row;
+                        cur.next.row = tmp;
+                        swapped = true;
+                    }
+                    cur = cur.next;
+                }
+            } while (swapped);
+        }
+
         /* ---------- Compare helper ---------- */
         private int compare(String[] a, String[] b, int j, boolean isNum, boolean asc) {
             int c;
@@ -153,13 +215,11 @@ public class StudentSQLDB {
 
         /* ---------- Print selected columns ---------- */
         void printSelected(List<Integer> idx) {
-            // header
             for (int i = 0; i < idx.size(); i++) {
                 if (i > 0) System.out.print(",");
                 System.out.print(header[idx.get(i)]);
             }
             System.out.println();
-            // rows
             for (Node n = head; n != null; n = n.next) {
                 for (int i = 0; i < idx.size(); i++) {
                     if (i > 0) System.out.print(",");
@@ -173,13 +233,11 @@ public class StudentSQLDB {
         void exportCSV(String path, List<Integer> idx) throws IOException {
             try (PrintWriter pw = new PrintWriter(
                     new OutputStreamWriter(new FileOutputStream(path), StandardCharsets.UTF_8))) {
-                // header
                 for (int i = 0; i < idx.size(); i++) {
                     if (i > 0) pw.print(",");
                     pw.print(header[idx.get(i)]);
                 }
                 pw.println();
-                // rows (recursive)
                 writeRec(head, idx, pw);
             }
         }
@@ -207,7 +265,7 @@ public class StudentSQLDB {
     }
 
     // Grammar:
-    //   select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort;
+    //   select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort|merge_sort|bubble_sort;
     static SQL parseSQL(String sql) {
         String s = sql.trim();
         if (s.endsWith(";")) s = s.substring(0, s.length()-1);
@@ -244,7 +302,8 @@ public class StudentSQLDB {
 
         // WITH algorithm
         String algo = s.substring(withPos + " with ".length()).trim().toLowerCase(Locale.ROOT);
-        if (!(algo.equals("insertion_sort") || algo.equals("quick_sort"))) {
+        if (!(algo.equals("insertion_sort") || algo.equals("quick_sort") ||
+              algo.equals("merge_sort")     || algo.equals("bubble_sort"))) {
             throw new IllegalArgumentException("Unknown sorting algorithm: " + algo);
         }
 
@@ -298,11 +357,13 @@ public class StudentSQLDB {
         System.out.println("[Init] Loaded rows: " + db.countRows());
         System.out.println("[Commands]: rows | select ...; | output <file> | quit");
         System.out.println("Examples:");
-        System.out.println("select school,sex,age from t1 order by age ASC with insertion_sort;");
+        System.out.println("select school,sex,age from t1 order by age ASC with bubble_sort;");
         System.out.println("select school,sex,age from t1 order by age DSC with quick_sort;");
+        System.out.println("select school,sex,age from t1 order by age ASC with merge_sort;");
+        System.out.println("select school,sex,age from t1 order by age ASC with insertion_sort;");
         System.out.println("output out.csv");
-        String line;
 
+        String line;
         while (true) {
             System.out.print("> ");
             line = in.readLine();
@@ -334,15 +395,18 @@ public class StudentSQLDB {
                     System.out.println("Exported to: " + outFile);
                 } else if (lwr.startsWith("select ")) {
                     SQL q = parseSQL(line);
-                    if (q.algo.equals("insertion_sort")) db.insertionSort(q.orderCol, q.asc);
-                    else if (q.algo.equals("quick_sort")) db.quickSort(q.orderCol, q.asc);
+                    switch (q.algo) {
+                        case "insertion_sort": db.insertionSort(q.orderCol, q.asc); break;
+                        case "quick_sort":     db.quickSort(q.orderCol, q.asc);     break;
+                        case "merge_sort":     db.mergeSort(q.orderCol, q.asc);     break;
+                        case "bubble_sort":    db.bubbleSort(q.orderCol, q.asc);    break;
+                        default: throw new IllegalArgumentException("Unsupported algo: " + q.algo);
+                    }
 
-                    // build projection indexes & print result
                     List<Integer> idx = new ArrayList<>();
                     for (String c : q.cols) idx.add(db.colIndex(c));
                     db.printSelected(idx);
 
-                    // remember projection for subsequent 'output'
                     lastSelectedIdx = idx;
                 } else {
                     System.out.println("Unknown command");
