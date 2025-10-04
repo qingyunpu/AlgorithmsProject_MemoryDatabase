@@ -5,25 +5,36 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 /*
-  @author: Kowshick Srinivasan
+  @author: Kowshick Srinivasan, Qingyun PU
  * @version: 1.0
  * @Assignment: course project-1
  */
 
 /**
- * Memory database class that does:
- * <p>
- * a) load the student-data.csv file into the memory database through recursive function.
- * <p>
- * b) Perform SQL select query, and order the result in ASC/DSC based on the selected sorting algorithm
- * <p>
- * c) export the memory database into a csv file through recursive function.
- */
+ * MemoryDatabase.java
+ *
+ * Features
+ *  - Load CSV into an in-memory linked list
+ *  - Insertion sort (linked-list relink)
+ *  - Quick sort (linked-list recursive partition)
+ *  - Minimal SQL:
+ *      select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort;
+ *  - Recursive CSV export via: output <file>
+ *    (exports ONLY the last query's SELECT columns; falls back to all columns if no query yet)
+ *
+ * Usage
+ *   javac *.java
+ *   java MemoryDatabase
+ *   # REPL examples:
+ *   select school,sex,age from t1 order by age ASC with insertion_sort;
+ *   select school,sex,age from t1 order by age DSC with quick_sort;
+ *   quit
+ **/
 public class MemoryDatabase {
 
     LinkedList list;  //Object of the linked list
 
-    private static final String BASE_PATH = "D:\\Algorithms\\CourseProject-1\\Data"; // target directory
+    private static final String BASE_PATH = "."; // target directory
 
     private static final String FILENAME = "student-data.csv";  //input file name
 
@@ -97,7 +108,7 @@ public class MemoryDatabase {
      * @param columnString - Raw string obtained from user-input
      * @return Object.field equivalent of the string
      */
-    private static Field convertStringToField(String columnString) {
+    private Field convertStringToField(String columnString) {
         Field matchedField = null;
         for (Field f : Student.class.getDeclaredFields())
             if (f.getName().equalsIgnoreCase(columnString)) {
@@ -126,22 +137,12 @@ public class MemoryDatabase {
             current = head;
 
             while (current.next != sortedNode) { //Keep track of the sorted elements
-                if (Objects.equals(sortMethod, "ASC")) {  //If ascending order sort ascending order
-                    if (current.student.compare(current.next.student, comparatorColumn) > 0) {
-                        //Swap two elements
-                        Student temp = current.student;
-                        current.student = current.next.student;
-                        current.next.student = temp;
-                        flag = true;
-                    }
-                } else { //Else order sort descending order
-                    if (current.student.compare(current.next.student, comparatorColumn) < 0) {
-                        //Swap two elements
-                        Student temp = current.student;
-                        current.student = current.next.student;
-                        current.next.student = temp;
-                        flag = true;
-                    }
+                if (compareTo(current.student, current.next.student, comparatorColumn, sortMethod) > 0) {
+                    //Swap two elements
+                    Student temp = current.student;
+                    current.student = current.next.student;
+                    current.next.student = temp;
+                    flag = true;
                 }
 
                 current = current.next; //move pointer to the next
@@ -151,6 +152,98 @@ public class MemoryDatabase {
         } while (flag); //while every element is swapped, and list is in order
 
         return head;
+    }
+
+    /* ---------- Quick Sort (linked-list recursive partition) ---------- */
+    LinkedList.Node quickSort(LinkedList.Node head, Field colName, String asc) throws IllegalAccessException {
+        if (head == null) return head;
+        head = quickSortRec(head, colName, asc);
+        return head;
+    }
+
+    private LinkedList.Node quickSortRec(LinkedList.Node start, Field colName, String asc) throws IllegalAccessException {
+        if (start == null || start.next == null) return start;
+        LinkedList.Node pivot = start;
+        LinkedList.Node cur = start.next;
+        pivot.next = null;
+        LinkedList.Node lessH = null, lessT = null, geH = null, geT = null;
+
+        while (cur != null) {
+            LinkedList.Node nxt = cur.next;
+            cur.next = null;
+            if (compareTo(cur.student, pivot.student, colName, asc) < 0) {
+                if (lessH == null) {
+                    lessH = lessT = cur;
+                } else {
+                    lessT.next = cur;
+                    lessT = cur;
+                }
+            } else {
+                if (geH == null) {
+                    geH = geT = cur;
+                } else {
+                    geT.next = cur;
+                    geT = cur;
+                }
+            }
+            cur = nxt;
+        }
+
+        lessH = quickSortRec(lessH, colName, asc);
+        geH = quickSortRec(geH, colName, asc);
+
+        LinkedList.Node headNew = (lessH != null) ? lessH : pivot;
+        if (lessH != null) {
+            LinkedList.Node t = lessH;
+            while (t.next != null) t = t.next;
+            t.next = pivot;
+        }
+        pivot.next = geH;
+        return headNew;
+    }
+
+
+    private LinkedList.Node insertionSorts(LinkedList.Node head, Field comparatorColumn, String sortMethod) throws IllegalAccessException {
+
+        LinkedList.Node sortedNode = head;  //Keep track of the last sort node, Initially head node is sorted
+        LinkedList.Node current = head.next;  //Loop from the second node
+
+        while (current != null) {    //Until end of list
+            //current node is less than given Node in sorted list
+            // if(current.student.compareTo(sortedNode.student) >=0){
+            if (compareTo(current.student, sortedNode.student, comparatorColumn, sortMethod) >= 0) {
+                //insert the current node before the given sorted node
+                sortedNode = current;
+                current = current.next;
+            } else {
+                LinkedList.Node insert = current;
+                current = current.next;
+                sortedNode.next = current;
+
+                if (compareTo(insert.student, head.student, comparatorColumn, sortMethod) <= 0) { // If the current node is smaller than the head node
+                    //replace head node with current node
+                    insert.next = head;
+                    head = insert;
+                } else {
+                    LinkedList.Node prev = head;
+                    //Find the next biggest node
+                    while (prev.next != null &&
+                            compareTo(prev.next.student, insert.student, comparatorColumn, sortMethod) < 0)
+                        prev = prev.next;
+
+                    //insert before that node
+                    insert.next = prev.next;
+                    prev.next = insert;
+                }
+            }
+        }
+        return head;  //Complete status
+
+    }
+
+    private int compareTo(Student student, Student student1, Field comparatorColumn, String asc) throws IllegalAccessException {
+        int c = student.compare(student1, comparatorColumn);
+        return Objects.equals(asc, "ASC") ? c : -c;
     }
 
     /**
@@ -206,26 +299,14 @@ public class MemoryDatabase {
                                   Field comparatorColumn, String sortMethod) throws IllegalAccessException {
         if (left == null) return right;
         if (right == null) return left;
-        if (Objects.equals(sortMethod, "ASC")) { //If Ascending sort in ascending
-            if (left.student.compare(right.student, comparatorColumn) < 0) { // left is smaller than the right node
-                //put left to the list
-                left.next = merge(left.next, right, comparatorColumn, sortMethod);
-                return left;
-            } else {   //left is greater or equal
-                //put right to the list
-                right.next = merge(left, right.next, comparatorColumn, sortMethod);
-                return right;
-            }
-        } else {   //Else sort in Descending
-            if (left.student.compare(right.student, comparatorColumn) > 0) { // left is greater than the right node
-                //put left to the list
-                left.next = merge(left.next, right, comparatorColumn, sortMethod);
-                return left;
-            } else { //left is smaller or equal
-                //put right to the list
-                right.next = merge(left, right.next, comparatorColumn, sortMethod);
-                return right;
-            }
+        (compareTo(left.student, right.student, comparatorColumn, sortMethod) < 0) { // left is smaller than the right node
+            //put left to the list
+            left.next = merge(left.next, right, comparatorColumn, sortMethod);
+            return left;
+        } else {   //left is greater or equal
+            //put right to the list
+            right.next = merge(left, right.next, comparatorColumn, sortMethod);
+            return right;
         }
     }
 
