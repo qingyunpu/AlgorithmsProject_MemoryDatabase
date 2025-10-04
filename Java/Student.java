@@ -138,48 +138,22 @@ public class Student /*implements Comparable<Student>*/ {
         return studentVariable ? "yes" : "no"; //If bool is True convert to yes else no
     }
 
-    //Equals method compare two object of same type (deep comparison) to tell if they are both equal
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;                   //If both are the same object
-        if (!(obj instanceof Student student)) return false;   // If your comparing with some other object tye
-        //Convert the type of Object to Student
-        return Objects.equals(school, student.school) &&
-                Objects.equals(mJob, student.mJob) &&
-                Objects.equals(fJob, student.fJob) &&
-                Objects.equals(reason, student.reason) &&
-                Objects.equals(guardian, student.guardian) &&
-                Objects.equals(famSize, student.famSize) &&
-                Objects.equals(sex, student.sex) &&
-                Objects.equals(address, student.address) &&
-                Objects.equals(pStatus, student.pStatus) &&
-                Objects.equals(age, student.age) &&
-                Objects.equals(famRel, student.famRel) &&
-                Objects.equals(freeTime, student.freeTime) &&
-                Objects.equals(goOut, student.goOut) &&
-                Objects.equals(dalc, student.dalc) &&
-                Objects.equals(walc, student.walc) &&
-                Objects.equals(health, student.health) &&
-                Objects.equals(absence, student.absence) &&
-                Objects.equals(travelTime, student.travelTime) &&
-                Objects.equals(studyTime, student.studyTime) &&
-                Objects.equals(failures, student.failures) &&
-                Objects.equals(medu, student.medu) &&
-                Objects.equals(fedu, student.fedu) &&
-                Objects.equals(schoolsUp, student.schoolsUp) &&
-                Objects.equals(farmsUp, student.farmsUp) &&
-                Objects.equals(paid, student.paid) &&
-                Objects.equals(activities, student.activities) &&
-                Objects.equals(nursery, student.nursery) &&
-                Objects.equals(higher, student.higher) &&
-                Objects.equals(internet, student.internet) &&
-                Objects.equals(romantic, student.romantic) &&
-                Objects.equals(passed, student.passed);
-
-    }
-
+    /**
+     * Method that compares this filterStudent object to the given studentObject using the comparision column
+     *
+     * @param matchedField              - Sort based on this column
+     * @param student - to be compared class
+     * @return integer specifying comparision result
+     */
     public int compare(Student student, Field matchedField) throws IllegalAccessException {
-        throw new RuntimeException("Unsupported");
+        Object v1 = matchedField.get(this);
+        Object v2 = matchedField.get(student);
+
+        if (v1 instanceof Comparable && v2 instanceof Comparable) { //All Non-primitive datatypes are instance of Comparable interface
+            return ((Comparable) v1).compareTo(v2);  //Compare the two column values
+        } else {
+            throw new IllegalArgumentException("Cannot not comparable this column");  // if not instance of comparable
+        }
     }
 
 
