@@ -6,9 +6,8 @@
  */
 
 import java.lang.reflect.Field;
-import java.util.Objects;
 
-public class Student /*implements Comparable<Student>*/ {
+public class Student {
     String school;
     String mJob;
     String fJob;
@@ -51,7 +50,39 @@ public class Student /*implements Comparable<Student>*/ {
     boolean romantic;
     boolean passed;
 
-    public Student() {
+    //Copy Constructor
+    public Student(Student copy) {
+        this.school = copy.school;
+        this.mJob = copy.mJob;
+        this.fJob = copy.fJob;
+        this.reason = copy.reason;
+        this.guardian = copy.guardian;
+        this.famSize = copy.famSize;
+        this.sex = copy.sex;
+        this.address = copy.address;
+        this.pStatus = copy.pStatus;
+        this.age = copy.age;
+        this.famRel = copy.famRel;
+        this.freeTime = copy.freeTime;
+        this.goOut = copy.goOut;
+        this.dalc = copy.dalc;
+        this.walc = copy.walc;
+        this.health = copy.health;
+        this.absence = copy.absence;
+        this.travelTime = copy.travelTime;
+        this.studyTime = copy.studyTime;
+        this.failures = copy.failures;
+        this.medu = copy.medu;
+        this.fedu = copy.fedu;
+        this.schoolsUp = copy.schoolsUp;
+        this.farmsUp = copy.farmsUp;
+        this.paid = copy.paid;
+        this.activities = copy.activities;
+        this.nursery = copy.nursery;
+        this.higher = copy.higher;
+        this.internet = copy.internet;
+        this.romantic = copy.romantic;
+        this.passed = copy.passed;
     }
 
     //Constructor to initialize the class variables
@@ -169,7 +200,7 @@ public class Student /*implements Comparable<Student>*/ {
             values[i] = columns[i].get(this); //Get the data of the student variable
         }
 
-        return new FilteredStudent(columns, values);  //map the columns and values to a filteredStudent object
+        return new FilteredStudent(this,columns, values);  //map the columns and values to a filteredStudent object
     }
 }
 

@@ -202,7 +202,7 @@ public class MemoryDatabase {
     }
 
 
-    private LinkedList.Node insertionSorts(LinkedList.Node head, Field comparatorColumn, String sortMethod) throws IllegalAccessException {
+    private LinkedList.Node insertionSort(LinkedList.Node head, Field comparatorColumn, String sortMethod) throws IllegalAccessException {
 
         LinkedList.Node sortedNode = head;  //Keep track of the last sort node, Initially head node is sorted
         LinkedList.Node current = head.next;  //Loop from the second node
@@ -365,7 +365,7 @@ public class MemoryDatabase {
                         database.bubbleSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
                 case "insertion_sort" ->
                     // Insertion Sort
-                        database.insertionSorts(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
+                        database.insertionSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
                 case "merge_sort" ->
                         database.mergeSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
                 default ->
