@@ -12,23 +12,23 @@ import java.util.stream.Collectors;
 
 /**
  * MemoryDatabase.java
- *
+ * <p>
  * Features
- *  - Load CSV into an in-memory linked list
- *  - Insertion sort (linked-list relink)
- *  - Quick sort (linked-list recursive partition)
- *  - Minimal SQL:
- *      select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort;
- *  - Recursive CSV export via: output <file>
- *    (exports ONLY the last query's SELECT columns; falls back to all columns if no query yet)
- *
+ * - Load CSV into an in-memory linked list
+ * - Insertion sort (linked-list relink)
+ * - Quick sort (linked-list recursive partition)
+ * - Minimal SQL:
+ * select c1, c2, ... from t1 order by cX ASC/DSC with insertion_sort|quick_sort;
+ * - Recursive CSV export via: output <file>
+ * (exports ONLY the last query's SELECT columns; falls back to all columns if no query yet)
+ * <p>
  * Usage
- *   javac *.java
- *   java MemoryDatabase
- *   # REPL examples:
- *   select school,sex,age from t1 order by age ASC with insertion_sort;
- *   select school,sex,age from t1 order by age DSC with quick_sort;
- *   quit
+ * javac *.java
+ * java MemoryDatabase
+ * # REPL examples:
+ * select school,sex,age from t1 order by age ASC with insertion_sort;
+ * select school,sex,age from t1 order by age DSC with quick_sort;
+ * quit
  **/
 public class MemoryDatabase {
 
@@ -108,7 +108,7 @@ public class MemoryDatabase {
      * @param columnString - Raw string obtained from user-input
      * @return Object.field equivalent of the string
      */
-    private Field convertStringToField(String columnString) {
+    private static Field convertStringToField(String columnString) {
         Field matchedField = null;
         for (Field f : Student.class.getDeclaredFields())
             if (f.getName().equalsIgnoreCase(columnString)) {
@@ -156,22 +156,21 @@ public class MemoryDatabase {
 
     /* ---------- Quick Sort (linked-list recursive partition) ---------- */
     LinkedList.Node quickSort(LinkedList.Node head, Field colName, String asc) throws IllegalAccessException {
-        if (head == null) return head;
+        if (head == null) return null;
         head = quickSortRec(head, colName, asc);
         return head;
     }
 
     private LinkedList.Node quickSortRec(LinkedList.Node start, Field colName, String asc) throws IllegalAccessException {
         if (start == null || start.next == null) return start;
-        LinkedList.Node pivot = start;
         LinkedList.Node cur = start.next;
-        pivot.next = null;
+        start.next = null;
         LinkedList.Node lessH = null, lessT = null, geH = null, geT = null;
 
         while (cur != null) {
             LinkedList.Node nxt = cur.next;
             cur.next = null;
-            if (compareTo(cur.student, pivot.student, colName, asc) < 0) {
+            if (compareTo(cur.student, start.student, colName, asc) < 0) {
                 if (lessH == null) {
                     lessH = lessT = cur;
                 } else {
@@ -192,13 +191,13 @@ public class MemoryDatabase {
         lessH = quickSortRec(lessH, colName, asc);
         geH = quickSortRec(geH, colName, asc);
 
-        LinkedList.Node headNew = (lessH != null) ? lessH : pivot;
+        LinkedList.Node headNew = (lessH != null) ? lessH : start;
         if (lessH != null) {
             LinkedList.Node t = lessH;
             while (t.next != null) t = t.next;
-            t.next = pivot;
+            t.next = start;
         }
-        pivot.next = geH;
+        start.next = geH;
         return headNew;
     }
 
@@ -299,7 +298,7 @@ public class MemoryDatabase {
                                   Field comparatorColumn, String sortMethod) throws IllegalAccessException {
         if (left == null) return right;
         if (right == null) return left;
-        (compareTo(left.student, right.student, comparatorColumn, sortMethod) < 0) { // left is smaller than the right node
+        if (compareTo(left.student, right.student, comparatorColumn, sortMethod) < 0) { // left is smaller than the right node
             //put left to the list
             left.next = merge(left.next, right, comparatorColumn, sortMethod);
             return left;
@@ -361,22 +360,18 @@ public class MemoryDatabase {
             //filter only required column
             LinkedList.Node filteredStudentList = database.filterQuery(parameters.columns());
             //Sort the filtered Object using the selected algorithm
-            switch (parameters.sortAlgorithm()) {
-                case "bubble_sort":
-                    filteredStudentList = database.bubbleSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
-                    break;
-                case "insertion_sort":
-                    //TODO: Insertion Sort
-                    System.out.println("insertion Sort");
-                    break;
-                case "merge_sort":
-                    filteredStudentList = database.mergeSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
-                    break;
-                default:
-                    //TODO: quick Sort
-                    break;
-
-            }
+            filteredStudentList = switch (parameters.sortAlgorithm()) {
+                case "bubble_sort" ->
+                        database.bubbleSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
+                case "insertion_sort" ->
+                    // Insertion Sort
+                        database.insertionSorts(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
+                case "merge_sort" ->
+                        database.mergeSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
+                default ->
+                    //quick Sort
+                        database.quickSort(filteredStudentList, parameters.sortColumn(), parameters.sortMethod());
+            };
             //Get the columns header in a comma separated string
             String head = Arrays.stream(parameters.columns())
                     .map(Field::getName).
