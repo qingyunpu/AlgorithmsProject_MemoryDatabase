@@ -36,7 +36,7 @@ public class MemoryDatabase {
 
     LinkedList list;  //Object of the linked list
 
-    private static final String BASE_PATH = "D:\\Algorithms\\IndHw2\\Data"; // target directory
+    private static final String BASE_PATH = "."; // target directory
 
     private static final String FILENAME = "student-data.csv";  //input file name
 
