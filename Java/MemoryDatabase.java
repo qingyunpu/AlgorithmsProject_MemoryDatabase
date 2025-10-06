@@ -1,5 +1,7 @@
 import java.io.*;
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,17 +36,29 @@ public class MemoryDatabase {
 
     LinkedList list;  //Object of the linked list
 
-    private static final String BASE_PATH = "."; // target directory
+    private static final String BASE_PATH = "D:\\Algorithms\\IndHw2\\Data"; // target directory
 
     private static final String FILENAME = "student-data.csv";  //input file name
 
-    private static final String OUTFILE = "student-op-data.csv"; //output file name
+    private static final String OUTFILE = "student-op-data" + getTimeStamp() + ".csv"; //output file name
 
     //Constructor based dependency injection
     public MemoryDatabase(LinkedList list) {
         this.list = list;
 
     }
+
+    /**
+     * Return the current timestamp in specified format
+     *
+     * @return timestamp
+     */
+    private static String getTimeStamp() {
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMddyyyy_HHmmss");
+        return now.format(formatter);
+    }
+
 
     /**
      * Method to filter out only the required columns from the Linked List/in-memory database
@@ -353,8 +367,11 @@ public class MemoryDatabase {
         {
             br.readLine();  //Skip the Header of the csv
             database.read(br, database.list.head);   //Read the student details from the file and add it to the linked list
+            System.out.println("Write the select query");
+            System.out.println("SQL> ");
             //Get the select query from the user
             String userInput = scanner.nextLine();
+
             //Check an retrieve parameters
             SelectParameters parameters = database.retrieveParameters(userInput);
             //filter only required column
@@ -381,7 +398,7 @@ public class MemoryDatabase {
             printWriter.println(head);  //print the header row of the csv
             //Print rest of the rows
             database.print(filteredStudentList, printWriter);
-
+            System.out.println("Output save to " + OUTFILE);
         } catch (Exception e) { //Global catch block to handle all the exception thrown by the program
             e.printStackTrace(System.out);  //print the exception stack trace in console
         }
